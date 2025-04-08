@@ -1,0 +1,11 @@
+/.vs/
+/Demo1.Dto/bin/
+/Demo1.Dto/obj/
+/Demo1.Helper/bin/
+/Demo1.Helper/obj/
+/Demo1.Service/bin/
+/Demo1.Service/obj/
+/Demo1.WebAPI/bin/
+/Demo1.WebAPI/obj/
+/Demo1.WebAPI/Configs/test-1.json
+/Demo1.WebAPI/*.user

@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FirebaseAdmin" Version="3.1.0" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.69.0.3703" />
+    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.69.0.3694" />
+    <PackageReference Include="Google.Cloud.Firestore" Version="3.10.0" />
+    <PackageReference Include="Google.Cloud.Storage.V1" Version="4.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Demo1.Dto\Demo1.Dto.csproj" />
+    <ProjectReference Include="..\Demo1.Helper\Demo1.Helper.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Google.Cloud.Firestore">
+      <HintPath>..\..\..\.nuget\google.cloud.firestore\3.10.0\lib\netstandard2.0\Google.Cloud.Firestore.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
