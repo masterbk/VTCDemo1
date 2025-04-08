@@ -11,16 +11,16 @@ namespace Demo1.Service
             _firestore = firestoreDb;
         }
 
-        public async Task<WriteResult> CreateAsync<T>(string collectionName, T data)
+        public async Task<WriteResult> CreateAsync<T>(string? collectionName, T data)
         {
-            var docRef = _firestore.Collection(collectionName).Document();
+            var docRef = _firestore.Collection(collectionName??"images").Document();
             var wrireResult = await docRef.SetAsync(data);
             return wrireResult;
         }
 
-        public async Task<DocumentSnapshot?> SearchAsync(string collectionName, string fieldName, string keyword)
+        public async Task<DocumentSnapshot?> SearchAsync(string? collectionName, string fieldName, string keyword)
         {
-            CollectionReference imagesRef = _firestore.Collection(collectionName);
+            CollectionReference imagesRef = _firestore.Collection(collectionName??"images");
 
             Query query = imagesRef.WhereArrayContains(fieldName, keyword).Limit(1);
 

@@ -1,24 +1,69 @@
-﻿using Google.Cloud.Storage.V1;
+﻿using Demo1.Dto.Options;
+using Google;
+using Google.Apis.Storage.v1.Data;
+using Google.Cloud.Storage.V1;
 
 namespace Demo1.Service
 {
     public class GoogleStorageService
     {
         private readonly StorageClient _storageClient;
+        private readonly GCPOption _gCPOption;
 
-        public GoogleStorageService(StorageClient storageClient)
+        public GoogleStorageService(StorageClient storageClient,
+            GCPOption gCPOption)
         {
             _storageClient = storageClient;
+            _gCPOption = gCPOption;
+        }
+
+        public async Task<bool> CreateBucketAsync(string bucketName)
+        {
+            try
+            {
+                await _storageClient.CreateBucketAsync(_gCPOption.ProjectID, bucketName);
+                return true;
+            }
+            catch (GoogleApiException ex) when (ex.Error.Code == 409)
+            {
+                Console.WriteLine($"Error creating bucket: {ex.Message}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating bucket: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task MakeBucketPublicAsync(string bucketName)
+        {
+            // Lấy policy hiện tại của bucket
+            var policy = await _storageClient.GetBucketIamPolicyAsync(bucketName);
+
+            // Thêm quyền roles/storage.objectViewer cho allUsers
+            policy.Bindings.Add(new Policy.BindingsData
+            {
+                Role = "roles/storage.objectViewer",
+                Members = new[] { "allUsers" }
+            });
+
+            // Cập nhật lại policy
+            _storageClient.SetBucketIamPolicy(bucketName, policy);
         }
 
         public async Task<Google.Apis.Storage.v1.Data.Object> UploadImageAsync(string bucketUri, string? fileName, 
             Stream stream, string? keyword)
         {
+            var strArr = bucketUri.Split("/");
+            var bucketName = strArr[0];
+            var folderName = strArr.Length > 1 ? $"{strArr[1]}/" : "";
+
             var obj = await _storageClient.UploadObjectAsync(new Google.Apis.Storage.v1.Data.Object
             {
-                Bucket = bucketUri,
-                Name = fileName??"No name",
-                Metadata = new Dictionary<string, string>
+                Bucket = bucketName,
+                Name = $"{folderName}{fileName}",
+                Metadata = new Dictionary<string, string?>
                 {
                     { "keyword", keyword }
                 }

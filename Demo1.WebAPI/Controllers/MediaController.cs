@@ -3,8 +3,10 @@ using Demo1.Dto.MediaDto.Response;
 using Demo1.Dto.Options;
 using Demo1.Helper;
 using Demo1.Service;
+using Google.Apis.Storage.v1.Data;
 using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Mvc;
+using System.Xml.Linq;
 
 namespace Demo1.WebAPI.Controllers
 {
@@ -48,11 +50,21 @@ namespace Demo1.WebAPI.Controllers
             var listUrlAndKeyword = await _googleSheetService
                 .GetValueByColumnNameAsync(importMediaRequest.SpreadsheetId, importMediaRequest.SheetName, "M", "N");
 
+            var createBucketResult = await _googleStorageService.CreateBucketAsync(importMediaRequest.BucketUri.Split("/")[0]);
+            if (createBucketResult)
+            {
+                //await _googleStorageService.MakeBucketPublicAsync(importMediaRequest.BucketUri.Split("/")[0]);
+            }
+            else
+            {
+                throw new Exception("Create bucket failed");
+            }
+
             foreach (var item in listUrlAndKeyword)
             {
                 numProcessed++;
                 var driveFileId = item["M"]?.ExtractDriveFileId();
-                if(string.IsNullOrWhiteSpace(driveFileId))
+                if (string.IsNullOrWhiteSpace(driveFileId))
                 {
                     continue;
                 }
@@ -65,7 +77,7 @@ namespace Demo1.WebAPI.Controllers
                 // Download ảnh từ Google Drive
                 var stream = await _googleDriveService.DownloadImageAsync(driveFileId);
 
-                if(stream.Length == 0)
+                if (stream.Length == 0)
                 {
                     continue;
                 }
@@ -95,7 +107,7 @@ namespace Demo1.WebAPI.Controllers
                 // Upload ảnh lên Google Storage
                 var obj = await _googleStorageService.UploadImageAsync(importMediaRequest.BucketUri, fileName,
                     stream, keyword);
-                if(obj == null)
+                if (obj == null)
                 {
                     continue;
                 }
@@ -103,8 +115,8 @@ namespace Demo1.WebAPI.Controllers
                 // Lưu thông tin vào Firebase
                 var wrireResult = await _firebaseService.CreateAsync<dynamic>(_gCPOption.FilebaseCollectionName, new
                 {
-                    fileName = fileName,
-                    url = obj.MediaLink,
+                    fileName,
+                    url = $"https://storage.googleapis.com/{importMediaRequest.BucketUri}/{fileName}",
                     keywords = keyword?.Split(",").Select(s => s?.Trim()?.ToLower()),
                     uploadedAt = Timestamp.GetCurrentTimestamp()
                 });

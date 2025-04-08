@@ -81,7 +81,7 @@ namespace Demo1.WebAPI
                 Credential = googleCredential
             };
             var firestoreClient = firestoreClientBuilder.Build();
-            var firestoreDb = FirestoreDb.Create(gcpOption.FirebaseProjectID, firestoreClient);
+            var firestoreDb = FirestoreDb.Create(gcpOption.ProjectID, firestoreClient);
             builder.Services.AddSingleton(firestoreDb);
 
             var storageClient = StorageClient.Create(googleCredential);

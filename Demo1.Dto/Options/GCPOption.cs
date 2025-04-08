@@ -8,8 +8,8 @@ namespace Demo1.Dto.Options
 {
     public class GCPOption
     {
-        public string FirebaseProjectID { get; set; }
-        public string CredentialFile { get; set; }
-        public string FilebaseCollectionName { get; set; }
+        public string? ProjectID { get; set; }
+        public string? CredentialFile { get; set; }
+        public string? FilebaseCollectionName { get; set; }
     }
 }
