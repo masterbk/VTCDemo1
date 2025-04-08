@@ -10,20 +10,17 @@ namespace Demo1.Service
     public class GoogleStorageService
     {
         private readonly StorageClient _storageClient;
-        private readonly GoogleDriveService _googleDriveService;
         public readonly DriveService _driveService;
         private readonly FirestoreDb _firestore;
 
         private readonly GCPOption _gCPOption;
         public GoogleStorageService(GoogleCredential googleCredential, 
             GCPOption gCPOption,
-            GoogleDriveService googleDriveService,
             DriveService driveService,
             FirestoreDb firestoreDb)
         {
             _gCPOption = gCPOption;
             _storageClient = StorageClient.Create(googleCredential);
-            _googleDriveService = googleDriveService;
             _driveService = driveService;
             _firestore = firestoreDb;
         }
