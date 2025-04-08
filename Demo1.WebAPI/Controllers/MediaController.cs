@@ -1,6 +1,9 @@
 ﻿using Demo1.Dto.MediaDto.Request;
 using Demo1.Dto.MediaDto.Response;
+using Demo1.Dto.Options;
+using Demo1.Helper;
 using Demo1.Service;
+using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Demo1.WebAPI.Controllers
@@ -13,15 +16,19 @@ namespace Demo1.WebAPI.Controllers
         public readonly GoogleStorageService _googleStorageService;
         public readonly GoogleDriveService _googleDriveService;
         public readonly FirebaseService _firebaseService;
+        public readonly GCPOption _gCPOption;
+
         public MediaController(GoogleSheetService googleSheetService,
             GoogleStorageService googleStorageService,
             GoogleDriveService googleDriveService,
-            FirebaseService firebaseService)
+            FirebaseService firebaseService,
+            GCPOption gCPOption)
         {
             _googleSheetService = googleSheetService;
             _googleStorageService = googleStorageService;
             _googleDriveService = googleDriveService;
             _firebaseService = firebaseService;
+            _gCPOption = gCPOption;
         }
 
         /// <summary>
@@ -36,17 +43,72 @@ namespace Demo1.WebAPI.Controllers
         public async Task<ImportMediaResponse> IngestAsync([FromBody] ImportMediaRequest importMediaRequest)
         {
             var numProcessed = 0;
+
+            // Đọc thông tin từ Google Sheet
             var listUrlAndKeyword = await _googleSheetService
                 .GetValueByColumnNameAsync(importMediaRequest.SpreadsheetId, importMediaRequest.SheetName, "M", "N");
 
             foreach (var item in listUrlAndKeyword)
             {
-                var rsUpload = await _googleStorageService.UploadImageAsync(importMediaRequest.BucketUri, item["M"], item["N"]);
                 numProcessed++;
-            }
+                var driveFileId = item["M"]?.ExtractDriveFileId();
+                if(string.IsNullOrWhiteSpace(driveFileId))
+                {
+                    continue;
+                }
 
-            //var tasks = listUrlAndKeyword.Select(item => _googleStorageService.UploadImageAsync(item["M"], item["N"]));
-            //await Task.WhenAll(tasks);
+                var keyword = item["N"];
+                var fileInfo = await _googleDriveService.GetFileInfoAsync(driveFileId);
+                var fileName = fileInfo.Name;
+                var mimeType = fileInfo.MimeType;
+
+                // Download ảnh từ Google Drive
+                var stream = await _googleDriveService.DownloadImageAsync(driveFileId);
+
+                if(stream.Length == 0)
+                {
+                    continue;
+                }
+
+                if (fileInfo.MimeType.IsImage() && !fileInfo.MimeType.IsImageWebp())
+                {
+                    //convert to webp
+                    var streamTmp = await MediaExtensions.ConvertImageToWebpAsync(stream);
+                    await stream.DisposeAsync();
+
+                    stream = streamTmp;
+                    fileName = $"{fileName.GetFileNameWithoutExtension()}.webp";
+                }
+                else
+                {
+                    if (fileInfo.MimeType.IsVideo() && !fileInfo.MimeType.IsVideoMp4())
+                    {
+                        //convert to mp4
+                        var streamTmp = await MediaExtensions.ConvertVideoToMp4Async(stream);
+                        await stream.DisposeAsync();
+                        fileName = $"{fileName.GetFileNameWithoutExtension()}.mp4";
+
+                        stream = streamTmp;
+                    }
+                }
+
+                // Upload ảnh lên Google Storage
+                var obj = await _googleStorageService.UploadImageAsync(importMediaRequest.BucketUri, fileName,
+                    stream, keyword);
+                if(obj == null)
+                {
+                    continue;
+                }
+
+                // Lưu thông tin vào Firebase
+                var wrireResult = await _firebaseService.CreateAsync<dynamic>(_gCPOption.FilebaseCollectionName, new
+                {
+                    fileName = fileName,
+                    url = obj.MediaLink,
+                    keywords = keyword?.Split(",").Select(s => s?.Trim()?.ToLower()),
+                    uploadedAt = Timestamp.GetCurrentTimestamp()
+                });
+            }
 
             return new ImportMediaResponse
             {
@@ -66,7 +128,8 @@ namespace Demo1.WebAPI.Controllers
             if (string.IsNullOrEmpty(searchMediaRequest.Keyword)) 
                 return result;
 
-            var searchResult = await _firebaseService.SearchAsync(searchMediaRequest.Keyword.Trim().ToLower());
+            var searchResult = await _firebaseService.SearchAsync(_gCPOption.FilebaseCollectionName, "keywords", searchMediaRequest.Keyword.Trim().ToLower());
+            
             result.Media = searchResult?.GetValue<string>("url");
 
             return result;

@@ -1,11 +1,4 @@
-﻿using Google.Apis.Auth.OAuth2;
-using Google.Apis.Sheets.v4;
-using Google.Apis.Sheets.v4.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Google.Apis.Sheets.v4;
 
 namespace Demo1.Service
 {
@@ -17,9 +10,9 @@ namespace Demo1.Service
             _sheetsService = sheetsService;
         }
 
-        public async Task<List<Dictionary<string, string>>> GetValueByColumnNameAsync(string sheetId, string sheetName, params string[] columnNames)
+        public async Task<List<Dictionary<string, string?>>> GetValueByColumnNameAsync(string sheetId, string sheetName, params string[] columnNames)
         {
-            var result = new List<Dictionary<string,string>>();
+            var result = new List<Dictionary<string,string?>>();
 
             var ranges = new List<string>();
             foreach(var columnName in columnNames)
@@ -39,8 +32,15 @@ namespace Demo1.Service
 
             for (int i = 0; i < minRow; i++)
             {
-                result.Add(new Dictionary<string, string>(columnNames.Select((s, index) => new KeyValuePair<string, string>(s, batchResponse.ValueRanges[index]
-                    .Values[i][0].ToString()))));
+                try
+                {
+                    result.Add(new Dictionary<string, string?>(columnNames.Select((s, index) => new KeyValuePair<string, string?>(s, batchResponse.ValueRanges[index]
+                        .Values[i][0].ToString()))));
+                }catch(Exception ex)
+                {
+                    // Handle the exception as needed
+                    Console.WriteLine($"Error processing row {i}: {ex.Message}");
+                }
             }
 
             return result;

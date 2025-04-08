@@ -1,10 +1,5 @@
-﻿using Google.Cloud.Firestore;
-using Google.Cloud.Firestore.V1;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Demo1.Dto.Options;
+using Google.Cloud.Firestore;
 
 namespace Demo1.Service
 {
@@ -16,11 +11,18 @@ namespace Demo1.Service
             _firestore = firestoreDb;
         }
 
-        public async Task<DocumentSnapshot> SearchAsync(string keyword)
+        public async Task<WriteResult> CreateAsync<T>(string collectionName, T data)
         {
-            CollectionReference imagesRef = _firestore.Collection("images");
+            var docRef = _firestore.Collection(collectionName).Document();
+            var wrireResult = await docRef.SetAsync(data);
+            return wrireResult;
+        }
 
-            Query query = imagesRef.WhereArrayContains("keywords", keyword).Limit(1);
+        public async Task<DocumentSnapshot?> SearchAsync(string collectionName, string fieldName, string keyword)
+        {
+            CollectionReference imagesRef = _firestore.Collection(collectionName);
+
+            Query query = imagesRef.WhereArrayContains(fieldName, keyword).Limit(1);
 
             QuerySnapshot snapshot = await query.GetSnapshotAsync();
 

@@ -5,6 +5,6 @@ namespace Demo1.Dto.MediaDto.Request
     public class SearchMediaRequest
     {
         [JsonPropertyName("keyword")]
-        public string Keyword { get; set; }
+        public string? Keyword { get; set; }
     }
 }

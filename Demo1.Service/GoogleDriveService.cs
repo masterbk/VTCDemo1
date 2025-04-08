@@ -1,6 +1,7 @@
 ﻿using Demo1.Helper;
 using Google.Apis.Download;
 using Google.Apis.Drive.v3;
+using Google.Apis.Drive.v3.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,25 +18,18 @@ namespace Demo1.Service
             _driveService = driveService;
         }
 
-        public async Task<string> GetFileNameAsync(string driveUrl)
+        public async Task<Google.Apis.Drive.v3.Data.File> GetFileInfoAsync(string driveFileId)
         {
-            var driveFileId = driveUrl.ExtractDriveFileId();
-            if (string.IsNullOrEmpty(driveFileId)) return "";
-
-            var file = await _driveService.Files.Get(driveFileId).ExecuteAsync();
-
-            return file != null ? file.Name : "";
+            return await _driveService.Files.Get(driveFileId).ExecuteAsync();
         }
 
-        public async Task<Stream> DownloadImageAsync(string driveUrl)
+        public async Task<MemoryStream> DownloadImageAsync(string driveFileId)
         {
-            var driveFileId = driveUrl.ExtractDriveFileId();
-            if (string.IsNullOrEmpty(driveFileId)) return null;
-
-            using var memStream = new MemoryStream();
+            var memStream = new MemoryStream();
             var request = _driveService.Files.Get(driveFileId);
             await request.DownloadAsync(memStream);
 
+            memStream.Position = 0; // Reset the stream position to the beginning
             return memStream;
         }
     }

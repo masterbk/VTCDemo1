@@ -10,7 +10,9 @@ using Google.Apis.Sheets.v4;
 using Google.Cloud.Firestore;
 using Google.Cloud.Firestore.V1;
 using Google.Cloud.Storage.V1;
-using System.Net;
+using FFMpegCore;
+using FFMpegCore.Pipes;
+using System.Runtime.InteropServices;
 
 namespace Demo1.WebAPI
 {
@@ -80,14 +82,25 @@ namespace Demo1.WebAPI
             };
             var firestoreClient = firestoreClientBuilder.Build();
             var firestoreDb = FirestoreDb.Create(gcpOption.FirebaseProjectID, firestoreClient);
-
-            // 5. Add vào DI container
             builder.Services.AddSingleton(firestoreDb);
+
+            var storageClient = StorageClient.Create(googleCredential);
+            builder.Services.AddSingleton(storageClient);
 
             builder.Services.AddSingleton<GoogleSheetService>();
             builder.Services.AddSingleton<GoogleDriveService>();
             builder.Services.AddSingleton<GoogleStorageService>();
             builder.Services.AddSingleton<FirebaseService>();
+
+            // Cấu hình đường dẫn đến ffmpeg nếu cần (nếu không nằm trong PATH)
+            var binaryPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+             ? "./ffmpeg/bin"
+             : "/app/tools/ffmpeg";
+
+            GlobalFFOptions.Configure(new FFOptions
+            {
+                BinaryFolder = binaryPath
+            });
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
