@@ -47,6 +47,7 @@ namespace Demo1.Helper
 
         public static async Task<MemoryStream> ConvertImageToWebpAsync(Stream stream)
         {
+            stream.Position = 0;
             var memoryStream = new MemoryStream();
 
             var arguments = FFMpegArguments
@@ -57,23 +58,40 @@ namespace Demo1.Helper
                     .WithFastStart());
 
             await arguments.ProcessAsynchronously();
+            memoryStream.Position = 0;
 
             return memoryStream;
         }
 
         public static async Task<MemoryStream> ConvertVideoToMp4Async(Stream stream)
         {
-            var memoryStream = new MemoryStream();
+            stream.Position = 0;
+
+            //var arguments = FFMpegArguments
+            //    .FromPipeInput(new StreamPipeSource(stream))
+            //    .OutputToPipe(new StreamPipeSink(memoryStream), options => options
+            //        .WithVideoCodec("libx264")
+            //        .WithAudioCodec("aac")
+            //        .ForceFormat("mp4"));
+
+            if (!Directory.Exists("./tmp"))
+            {
+                Directory.CreateDirectory("./tmp");
+            }
+
+            var outputFileName = $"./tmp/{Guid.NewGuid().ToString()}.mp4";
 
             var arguments = FFMpegArguments
                 .FromPipeInput(new StreamPipeSource(stream))
-                .OutputToPipe(new StreamPipeSink(memoryStream), options => options
+                .OutputToFile(outputFileName, true, options => options
                     .WithVideoCodec("libx264")
                     .WithAudioCodec("aac")
-                    .ForceFormat("mp4")
-                    .WithFastStart());
+                    .ForceFormat("mp4"));
 
             await arguments.ProcessAsynchronously();
+
+            var memoryStream = new MemoryStream(await File.ReadAllBytesAsync(outputFileName));
+            File.Delete(outputFileName);
 
             return memoryStream;
         }
