@@ -63,6 +63,7 @@ namespace Demo1.WebAPI.Controllers
             foreach (var item in listUrlAndKeyword)
             {
                 numProcessed++;
+
                 var driveFileId = item["M"]?.ExtractDriveFileId();
                 if (string.IsNullOrWhiteSpace(driveFileId))
                 {
@@ -73,6 +74,11 @@ namespace Demo1.WebAPI.Controllers
                 var fileInfo = await _googleDriveService.GetFileInfoAsync(driveFileId);
                 var fileName = fileInfo.Name;
                 var mimeType = fileInfo.MimeType;
+
+                if(!fileInfo.MimeType.IsImage() && !fileInfo.MimeType.IsVideo())
+                {
+                    continue;
+                }
 
                 // Download ảnh từ Google Drive
                 var stream = await _googleDriveService.DownloadImageAsync(driveFileId);
