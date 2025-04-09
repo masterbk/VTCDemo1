@@ -6,6 +6,7 @@ using Demo1.Service;
 using Google.Apis.Storage.v1.Data;
 using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System.Xml.Linq;
 
 namespace Demo1.WebAPI.Controllers
@@ -19,18 +20,21 @@ namespace Demo1.WebAPI.Controllers
         public readonly GoogleDriveService _googleDriveService;
         public readonly FirebaseService _firebaseService;
         public readonly GCPOption _gCPOption;
+        private readonly ILogger<MediaController> _logger;
 
         public MediaController(GoogleSheetService googleSheetService,
             GoogleStorageService googleStorageService,
             GoogleDriveService googleDriveService,
             FirebaseService firebaseService,
-            GCPOption gCPOption)
+            GCPOption gCPOption,
+            ILogger<MediaController> logger)
         {
             _googleSheetService = googleSheetService;
             _googleStorageService = googleStorageService;
             _googleDriveService = googleDriveService;
             _firebaseService = firebaseService;
             _gCPOption = gCPOption;
+            _logger = logger;
         }
 
         /// <summary>
@@ -62,6 +66,8 @@ namespace Demo1.WebAPI.Controllers
 
             foreach (var item in listUrlAndKeyword)
             {
+                _logger.LogInformation($"[ItemProcess]{item.ToJson()}");
+
                 numProcessed++;
 
                 var driveFileId = item["M"]?.ExtractDriveFileId();

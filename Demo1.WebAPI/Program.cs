@@ -13,6 +13,7 @@ using Google.Cloud.Storage.V1;
 using FFMpegCore;
 using FFMpegCore.Pipes;
 using System.Runtime.InteropServices;
+using Serilog;
 
 namespace Demo1.WebAPI
 {
@@ -28,6 +29,14 @@ namespace Demo1.WebAPI
             builder.Configuration.AddJsonFile($"{root}/appsettings.json", false, true);
             builder.Configuration.AddJsonFile($"{root}/appsettings.{enviroment}.json", true, true);
             builder.Configuration.AddEnvironmentVariables();
+
+            // Cấu hình Serilog từ appsettings.json
+            builder.Host.UseSerilog((context, services, configuration) => {
+                configuration
+                    .ReadFrom.Configuration(context.Configuration)
+                    .ReadFrom.Services(services)
+                    .Enrich.FromLogContext();
+            });
 
             var gcpOption = new GCPOption();
             builder.Configuration.GetSection(nameof(GCPOption)).Bind(gcpOption);
