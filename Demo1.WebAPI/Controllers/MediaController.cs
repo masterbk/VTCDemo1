@@ -48,11 +48,13 @@ namespace Demo1.WebAPI.Controllers
         [HttpPost("ingest")]
         public async Task<ImportMediaResponse> IngestAsync([FromBody] ImportMediaRequest importMediaRequest)
         {
-            var numProcessed = 0;
+            var result = new ImportMediaResponse() { NumProcessed = 0 };
 
             // Đọc thông tin từ Google Sheet
             var listUrlAndKeyword = await _googleSheetService
                 .GetValueByColumnNameAsync(importMediaRequest.SpreadsheetId, importMediaRequest.SheetName, "M", "N");
+            if (listUrlAndKeyword.Count() == 0)
+                return result;
 
             var createBucketResult = await _googleStorageService.CreateBucketAsync(importMediaRequest.BucketUri.Split("/")[0]);
             if (createBucketResult)
@@ -71,7 +73,7 @@ namespace Demo1.WebAPI.Controllers
                     item
                 }.ToJson()} ");
 
-                numProcessed++;
+                result.NumProcessed++;
 
                 var driveFileId = item["M"]?.ExtractDriveFileId();
                 if (string.IsNullOrWhiteSpace(driveFileId))
@@ -86,6 +88,16 @@ namespace Demo1.WebAPI.Controllers
 
                 var keyword = item["N"];
                 var fileInfo = await _googleDriveService.GetFileInfoAsync(driveFileId);
+                if(fileInfo == null)
+                {
+                    _logger.LogError($"[ItemProcess] {new
+                    {
+                        message = "Get file info error",
+                        item
+                    }.ToJson()} ");
+                    continue;
+                }
+
                 var fileName = fileInfo.Name;
                 var mimeType = fileInfo.MimeType;
 
@@ -115,10 +127,23 @@ namespace Demo1.WebAPI.Controllers
                 if (fileInfo.MimeType.IsImage() && !fileInfo.MimeType.IsImageWebp())
                 {
                     //convert to webp
-                    var streamTmp = await MediaExtensions.ConvertImageToWebpAsync(stream);
-                    await stream.DisposeAsync();
+                    try
+                    {
+                        var streamTmp = await MediaExtensions.ConvertImageToWebpAsync(stream);
+                        await stream.DisposeAsync();
+                        stream = streamTmp;
+                    }
+                    catch(Exception ex)
+                    {
+                        _logger.LogError($"[ItemProcess] {new
+                        {
+                            message = $"Convert image error: {ex.Message}",
+                            item
+                        }.ToJson()} ");
 
-                    stream = streamTmp;
+                        continue;
+                    }
+
                     fileName = $"{fileName.GetFileNameWithoutExtension()}.webp";
                 }
                 else
@@ -126,11 +151,24 @@ namespace Demo1.WebAPI.Controllers
                     if (fileInfo.MimeType.IsVideo() && !fileInfo.MimeType.IsVideoMp4())
                     {
                         //convert to mp4
-                        var streamTmp = await MediaExtensions.ConvertVideoToMp4Async(stream);
-                        await stream.DisposeAsync();
-                        fileName = $"{fileName.GetFileNameWithoutExtension()}.mp4";
+                        try
+                        {
+                            var streamTmp = await MediaExtensions.ConvertVideoToMp4Async(stream);
+                            await stream.DisposeAsync();
+                            stream = streamTmp;
+                        }
+                        catch(Exception ex)
+                        {
+                            _logger.LogError($"[ItemProcess] {new
+                            {
+                                message = $"Convert video error: {ex.Message}",
+                                item
+                            }.ToJson()} ");
 
-                        stream = streamTmp;
+                            continue;
+                        }
+
+                        fileName = $"{fileName.GetFileNameWithoutExtension()}.mp4";
                     }
                 }
 
@@ -156,12 +194,18 @@ namespace Demo1.WebAPI.Controllers
                     keywords = keyword?.Split(",").Select(s => s?.Trim()?.ToLower()),
                     uploadedAt = Timestamp.GetCurrentTimestamp()
                 });
+
+                if(wrireResult == null)
+                {
+                    _logger.LogError($"[ItemProcess] {new
+                    {
+                        message = "Create document error",
+                        item
+                    }.ToJson()} ");
+                }
             }
 
-            return new ImportMediaResponse
-            {
-                NumProcessed = numProcessed
-            };
+            return result;
         }
 
         /// <summary>

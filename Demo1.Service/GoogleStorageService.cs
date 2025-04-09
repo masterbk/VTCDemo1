@@ -2,6 +2,8 @@
 using Google;
 using Google.Apis.Storage.v1.Data;
 using Google.Cloud.Storage.V1;
+using Microsoft.Extensions.Logging;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Demo1.Service
 {
@@ -9,12 +11,14 @@ namespace Demo1.Service
     {
         private readonly StorageClient _storageClient;
         private readonly GCPOption _gCPOption;
+        private readonly ILogger<GoogleStorageService> _logger;
 
         public GoogleStorageService(StorageClient storageClient,
-            GCPOption gCPOption)
+            GCPOption gCPOption, ILogger<GoogleStorageService> logger)
         {
             _storageClient = storageClient;
             _gCPOption = gCPOption;
+            _logger = logger;
         }
 
         public async Task<bool> CreateBucketAsync(string bucketName)
@@ -26,12 +30,11 @@ namespace Demo1.Service
             }
             catch (GoogleApiException ex) when (ex.Error.Code == 409)
             {
-                Console.WriteLine($"Error creating bucket: {ex.Message}");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error creating bucket: {ex.Message}");
+                _logger.LogError($"[{nameof(GoogleStorageService)}.{nameof(CreateBucketAsync)}] => Error creating bucket: {ex.Message}");
                 return false;
             }
         }
@@ -52,24 +55,32 @@ namespace Demo1.Service
             _storageClient.SetBucketIamPolicy(bucketName, policy);
         }
 
-        public async Task<Google.Apis.Storage.v1.Data.Object> UploadImageAsync(string bucketUri, string? fileName, 
+        public async Task<Google.Apis.Storage.v1.Data.Object?> UploadImageAsync(string bucketUri, string? fileName, 
             Stream stream, string? keyword)
         {
-            var strArr = bucketUri.Split("/");
-            var bucketName = strArr[0];
-            var folderName = strArr.Length > 1 ? $"{strArr[1]}/" : "";
-
-            var obj = await _storageClient.UploadObjectAsync(new Google.Apis.Storage.v1.Data.Object
+            try
             {
-                Bucket = bucketName,
-                Name = $"{folderName}{fileName}",
-                Metadata = new Dictionary<string, string?>
+                var strArr = bucketUri.Split("/");
+                var bucketName = strArr[0];
+                var folderName = strArr.Length > 1 ? $"{strArr[1]}/" : "";
+
+                var obj = await _storageClient.UploadObjectAsync(new Google.Apis.Storage.v1.Data.Object
+                {
+                    Bucket = bucketName,
+                    Name = $"{folderName}{fileName}",
+                    Metadata = new Dictionary<string, string?>
                 {
                     { "keyword", keyword }
                 }
-            }, stream);
+                }, stream);
 
-            return obj;
+                return obj;
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError($"[{nameof(GoogleStorageService)}.{nameof(UploadImageAsync)}] => Upload error: {ex.Message}");
+                return null;
+            }
         }
     }
 }
