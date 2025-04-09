@@ -66,13 +66,21 @@ namespace Demo1.WebAPI.Controllers
 
             foreach (var item in listUrlAndKeyword)
             {
-                _logger.LogInformation($"[ItemProcess]{item.ToJson()}");
+                _logger.LogInformation($"[ItemProcess] {new
+                {
+                    item
+                }.ToJson()} ");
 
                 numProcessed++;
 
                 var driveFileId = item["M"]?.ExtractDriveFileId();
                 if (string.IsNullOrWhiteSpace(driveFileId))
                 {
+                    _logger.LogError($"[ItemProcess] {new
+                    {
+                        message = "DriveId invalid",
+                        item
+                    }.ToJson()} ");
                     continue;
                 }
 
@@ -83,6 +91,11 @@ namespace Demo1.WebAPI.Controllers
 
                 if(!fileInfo.MimeType.IsImage() && !fileInfo.MimeType.IsVideo())
                 {
+                    _logger.LogError($"[ItemProcess] {new
+                    {
+                        message = "Media invalid",
+                        item
+                    }.ToJson()} ");
                     continue;
                 }
 
@@ -91,6 +104,11 @@ namespace Demo1.WebAPI.Controllers
 
                 if (stream.Length == 0)
                 {
+                    _logger.LogError($"[ItemProcess] {new
+                    {
+                        message = "Download media error",
+                        item
+                    }.ToJson()} ");
                     continue;
                 }
 
@@ -121,6 +139,12 @@ namespace Demo1.WebAPI.Controllers
                     stream, keyword);
                 if (obj == null)
                 {
+                    _logger.LogError($"[ItemProcess] {new
+                    {
+                        message = "Upload media error",
+                        item
+                    }.ToJson()} ");
+
                     continue;
                 }
 
